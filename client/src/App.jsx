@@ -34,13 +34,14 @@ function App() {
       const response = await fetch(`${API_BASE}/${location._id}/weather`)
       const data = await response.json()
       if (data.success) {
+        const weather = data.data.weather || {}
         setWeatherData(prev => ({
           ...prev,
-          [location._id]: data.data.weather || {
-            temperature: 72,
-            condition: 'Sunny',
-            humidity: 45,
-            windSpeed: 8
+          [location._id]: {
+            temperature: weather.temperature?.current || 72,
+            condition: weather.weather?.main || 'Sunny',
+            humidity: weather.humidity || 45,
+            windSpeed: weather.wind?.speed || 8
           }
         }))
       }
@@ -131,13 +132,14 @@ function App() {
       })
       const data = await response.json()
       if (data.success) {
+        const weather = data.data || {}
         setWeatherData(prev => ({
           ...prev,
           [location._id]: {
-            temperature: data.data.temperature,
-            condition: data.data.condition,
-            humidity: data.data.humidity,
-            windSpeed: data.data.windSpeed
+            temperature: weather.temperature?.current || weather.temperature || 72,
+            condition: weather.weather?.main || weather.condition || 'Sunny',
+            humidity: weather.humidity || 45,
+            windSpeed: weather.wind?.speed || weather.windSpeed || 8
           }
         }))
       }
@@ -147,13 +149,23 @@ function App() {
   }
 
   const getWeatherIcon = (condition) => {
-    switch (condition) {
-      case 'Sunny': return '☀️'
-      case 'Cloudy': return '☁️'
-      case 'Rainy': return '🌧️'
-      case 'Partly Cloudy': return '⛅'
-      case 'Clear': return '🌤️'
-      default: return '🌤️'
+    // Handle both direct condition string and nested weather object
+    const weatherMain = typeof condition === 'object' ? condition.main : condition
+    switch (weatherMain) {
+      case 'Sunny':
+      case 'Clear':
+        return '☀️'
+      case 'Cloudy':
+      case 'Clouds':
+        return '☁️'
+      case 'Rainy':
+      case 'Rain':
+        return '🌧️'
+      case 'Partly Cloudy':
+      case 'Mist':
+        return '⛅'
+      default:
+        return '🌤️'
     }
   }
 
