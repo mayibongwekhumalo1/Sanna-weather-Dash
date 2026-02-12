@@ -22,7 +22,7 @@ A Node.js-based weather monitoring platform that fetches, stores, and provides w
 ## Project Structure
 
 ```
-weather-platform/
+server/
 ├── src/
 │   ├── server.js          # Application entry point
 │   ├── app.js             # Express app configuration

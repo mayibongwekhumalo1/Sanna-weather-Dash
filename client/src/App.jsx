@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 
-const API_BASE = '/api/locations'
+const API_BASE = '/locations'
 
 function App() {
   const [searchQuery, setSearchQuery] = useState('')
