@@ -113,7 +113,7 @@ const locationController = {
       res.json({ success: true, data: { location, weather: snapshot } });
     } catch (error) {
       console.error('Error getting location weather:', error.message);
-      res.status(500).json({ success: false, error: error.message });
+      res.status(error.statusCode || 500).json({ success: false, error: error.message, type: error.type });
     }
   },
 
@@ -127,7 +127,97 @@ const locationController = {
       }
     } catch (error) {
       console.error('Error refreshing weather:', error.message);
-      res.status(500).json({ success: false, error: error.message });
+      res.status(error.statusCode || 500).json({ success: false, error: error.message, type: error.type });
+    }
+  },
+
+  /**
+   * Fetch current weather by city name (no location ID required)
+   */
+  async getWeatherByCity(req, res) {
+    try {
+      const { city, country } = req.query;
+      
+      if (!city) {
+        return res.status(400).json({ 
+          success: false, 
+          error: 'City parameter is required' 
+        });
+      }
+
+      const weatherData = await weatherService.fetchCurrentWeatherByCity(city, country || '');
+      res.json({ 
+        success: true, 
+        data: { 
+          city: city + (country ? `,${country}` : ''),
+          weather: weatherData 
+        } 
+      });
+    } catch (error) {
+      console.error('Error fetching weather by city:', error.message);
+      res.status(error.statusCode || 500).json({ 
+        success: false, 
+        error: error.message, 
+        type: error.type 
+      });
+    }
+  },
+
+  /**
+   * Fetch 5-day forecast by city name
+   */
+  async getForecastByCity(req, res) {
+    try {
+      const { city, country } = req.query;
+      
+      if (!city) {
+        return res.status(400).json({ 
+          success: false, 
+          error: 'City parameter is required' 
+        });
+      }
+
+      const forecastData = await weatherService.fetchForecastByCity(city, country || '');
+      res.json({ 
+        success: true, 
+        data: forecastData 
+      });
+    } catch (error) {
+      console.error('Error fetching forecast by city:', error.message);
+      res.status(error.statusCode || 500).json({ 
+        success: false, 
+        error: error.message, 
+        type: error.type 
+      });
+    }
+  },
+
+  /**
+   * Fetch 5-day forecast by location ID
+   */
+  async getLocationForecast(req, res) {
+    try {
+      const location = await Location.findById(req.params.id);
+      if (!location) {
+        return res.status(404).json({ success: false, error: 'Location not found' });
+      }
+
+      const forecastData = await weatherService.fetchForecastByCoords(
+        location.latitude,
+        location.longitude
+      );
+      
+      res.json({ 
+        success: true, 
+        data: { location, forecast: forecastData } 
+      });
+    } catch (error) {
+      console.error('Error getting location forecast:', error.message);
+      res.status(error.statusCode || 500).json({ 
+        success: false, 
+        error: error.message, 
+        type: error.type 
+      });
     }
   },
 

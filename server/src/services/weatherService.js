@@ -6,8 +6,37 @@ class WeatherService {
   constructor() {
     this.apiKey = process.env.WEATHER_API_KEY;
     this.baseUrl = process.env.WEATHER_API_BASE_URL || 'https://api.openweathermap.org/data/2.5';
+    this.forecastUrl = process.env.WEATHER_API_FORECAST_URL || 'https://api.openweathermap.org/data/2.5';
   }
 
+  /**
+   * Categorize API errors for better handling
+   */
+  categorizeApiError(error, cityName) {
+    const errorMessage = error.message?.toLowerCase() || '';
+    const statusCode = error.response?.status;
+
+    if (statusCode === 401) {
+      return { type: 'auth', message: 'Invalid API key' };
+    }
+    if (statusCode === 404) {
+      return { type: 'not_found', message: `City '${cityName}' not found` };
+    }
+    if (statusCode === 429) {
+      return { type: 'rate_limit', message: 'API rate limit exceeded. Please try again later.' };
+    }
+    if (error.code === 'ECONNABORTED' || errorMessage.includes('timeout')) {
+      return { type: 'timeout', message: 'Request timed out. Please try again.' };
+    }
+    if (errorMessage.includes('network') || errorMessage.includes('econnreset')) {
+      return { type: 'network', message: 'Network error. Please check your connection.' };
+    }
+    return { type: 'unknown', message: errorMessage || 'An unexpected error occurred' };
+  }
+
+  /**
+   * Fetch current weather by coordinates
+   */
   async fetchCurrentWeatherByCoords(lat, lon) {
     try {
       const response = await axios.get(`${this.baseUrl}/weather`, {
@@ -17,15 +46,23 @@ class WeatherService {
           appid: this.apiKey,
           units: 'metric',
         },
+        timeout: 10000, // 10 second timeout
       });
 
       return this.transformApiResponse(response.data);
     } catch (error) {
-      console.error(`Error fetching weather for coordinates (${lat}, ${lon}):`, error.message);
-      throw error;
+      const categorizedError = this.categorizeApiError(error, `${lat},${lon}`);
+      console.error(`Error fetching weather for coordinates (${lat}, ${lon}):`, categorizedError.message);
+      const apiError = new Error(categorizedError.message);
+      apiError.type = categorizedError.type;
+      apiError.statusCode = error.response?.status || 500;
+      throw apiError;
     }
   }
 
+  /**
+   * Fetch current weather by city name
+   */
   async fetchCurrentWeatherByCity(cityName, countryCode = '') {
     try {
       let query = cityName;
@@ -39,13 +76,136 @@ class WeatherService {
           appid: this.apiKey,
           units: 'metric',
         },
+        timeout: 10000, // 10 second timeout
       });
 
       return this.transformApiResponse(response.data);
     } catch (error) {
-      console.error(`Error fetching weather for city (${cityName}):`, error.message);
-      throw error;
+      const categorizedError = this.categorizeApiError(error, cityName);
+      console.error(`Error fetching weather for city (${cityName}):`, categorizedError.message);
+      const apiError = new Error(categorizedError.message);
+      apiError.type = categorizedError.type;
+      apiError.statusCode = error.response?.status || 500;
+      throw apiError;
     }
+  }
+
+  /**
+   * Fetch 5-day forecast by city name
+   */
+  async fetchForecastByCity(cityName, countryCode = '') {
+    try {
+      let query = cityName;
+      if (countryCode) {
+        query = `${cityName},${countryCode}`;
+      }
+
+      const response = await axios.get(`${this.forecastUrl}/forecast`, {
+        params: {
+          q: query,
+          appid: this.apiKey,
+          units: 'metric',
+        },
+        timeout: 10000, // 10 second timeout
+      });
+
+      return this.transformForecastResponse(response.data);
+    } catch (error) {
+      const categorizedError = this.categorizeApiError(error, cityName);
+      console.error(`Error fetching forecast for city (${cityName}):`, categorizedError.message);
+      const apiError = new Error(categorizedError.message);
+      apiError.type = categorizedError.type;
+      apiError.statusCode = error.response?.status || 500;
+      throw apiError;
+    }
+  }
+
+  /**
+   * Fetch 5-day forecast by coordinates
+   */
+  async fetchForecastByCoords(lat, lon) {
+    try {
+      const response = await axios.get(`${this.forecastUrl}/forecast`, {
+        params: {
+          lat,
+          lon,
+          appid: this.apiKey,
+          units: 'metric',
+        },
+        timeout: 10000, // 10 second timeout
+      });
+
+      return this.transformForecastResponse(response.data);
+    } catch (error) {
+      const categorizedError = this.categorizeApiError(error, `${lat},${lon}`);
+      console.error(`Error fetching forecast for coordinates (${lat}, ${lon}):`, categorizedError.message);
+      const apiError = new Error(categorizedError.message);
+      apiError.type = categorizedError.type;
+      apiError.statusCode = error.response?.status || 500;
+      throw apiError;
+    }
+  }
+
+  /**
+   * Transform forecast API response to internal format
+   */
+  transformForecastResponse(data) {
+    // Group forecasts by day (take one reading per day at noon)
+    const dailyForecasts = {};
+    
+    data.list.forEach(forecast => {
+      const date = new Date(forecast.dt * 1000).toISOString().split('T')[0];
+      
+      if (!dailyForecasts[date]) {
+        dailyForecasts[date] = {
+          date,
+          temp: { min: Infinity, max: -Infinity },
+          weather: [],
+          humidity: [],
+          wind: [],
+        };
+      }
+
+      dailyForecasts[date].temp.min = Math.min(dailyForecasts[date].temp.min, forecast.main.temp_min);
+      dailyForecasts[date].temp.max = Math.max(dailyForecasts[date].temp.max, forecast.main.temp_max);
+      dailyForecasts[date].humidity.push(forecast.main.humidity);
+      dailyForecasts[date].wind.push(forecast.wind.speed);
+      
+      // Add weather info (use most frequent)
+      dailyForecasts[date].weather.push({
+        main: forecast.weather[0].main,
+        description: forecast.weather[0].description,
+        icon: forecast.weather[0].icon,
+      });
+    });
+
+    // Convert to array and limit to 5 days
+    const forecastDays = Object.values(dailyForecasts)
+      .slice(0, 5)
+      .map(day => ({
+        date: day.date,
+        temperature: {
+          min: Math.round(day.temp.min),
+          max: Math.round(day.temp.max),
+        },
+        weather: day.weather[Math.floor(day.weather.length / 2)], // Midday weather
+        humidity: Math.round(day.humidity.reduce((a, b) => a + b, 0) / day.humidity.length),
+        wind: {
+          speed: Math.round((day.wind.reduce((a, b) => a + b, 0) / day.wind.length) * 10) / 10,
+        },
+      }));
+
+    return {
+      city: {
+        name: data.city.name,
+        country: data.city.country,
+        sunrise: new Date(data.city.sunrise * 1000),
+        sunset: new Date(data.city.sunset * 1000),
+      },
+      forecast: forecastDays,
+      fetchedAt: new Date(),
+      apiSource: 'openweathermap',
+    };
   }
 
   transformApiResponse(data) {
