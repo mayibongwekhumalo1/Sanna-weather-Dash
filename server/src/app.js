@@ -9,14 +9,31 @@ import syncService from './sync/syncService.js';
 const app = express();
 
 app.use(cors({
-  origin: [
-    'https://sanna-weather-dash.vercel.app/',
-    'https://sanna-weather-dash-1.onrender.com/',
-    'https://sanna-weather-api.onrender.com',
-    'https://sanna-weather-dash.onrender.com',
-    'http://localhost:5173',
-    'http://localhost:3000'
-  ],
+  origin: function(origin, callback) {
+    // Allow requests with no origin (like mobile apps, curl requests)
+    if (!origin) return callback(null, true);
+    
+    // Allow all Vercel preview deployments
+    if (origin.endsWith('.vercel.app') || origin.endsWith('.now.sh')) {
+      return callback(null, true);
+    }
+    
+    // Allow specific domains
+    const allowedOrigins = [
+      'https://sanna-weather-dash.vercel.app',
+      'https://sanna-weather-dash-1.onrender.com',
+      'https://sanna-weather-api.onrender.com',
+      'https://sanna-weather-dash.onrender.com',
+      'http://localhost:5173',
+      'http://localhost:3000'
+    ];
+    
+    if (allowedOrigins.includes(origin)) {
+      return callback(null, true);
+    }
+    
+    callback(new Error('Not allowed by CORS'));
+  },
   credentials: true,
 }));
 app.use(express.json());
