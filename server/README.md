@@ -52,36 +52,78 @@ server/
 1. **Clone the repository**
    ```bash
    git clone <repository-url>
-   cd weather-platform
+   cd Sanna-weather-Dash
    ```
 
-2. **Install dependencies**
+2. **Navigate to server directory**
+   ```bash
+   cd server
+   ```
+
+3. **Install dependencies**
    ```bash
    npm install
    ```
 
-3. **Configure environment variables**
+4. **Configure environment variables**
    ```bash
    cp .env.example .env
    ```
 
-4. **Edit .env file**
+5. **Edit .env file**
+
+   Open `.env` in a text editor and update the following variables:
+
    ```env
+   # Server Configuration
    PORT=3000
    NODE_ENV=development
+
+   # MongoDB Configuration
    MONGODB_URI=mongodb://localhost:27017/weather-platform
+
+   # Weather API Configuration
    WEATHER_API_KEY=your_openweathermap_api_key
    WEATHER_API_BASE_URL=https://api.openweathermap.org/data/2.5
+   WEATHER_API_FORECAST_URL=https://api.openweathermap.org/data/2.5
+   WEATHER_API_GEOCODING_URL=https://api.openweathermap.org/geo/1.0
+
+   # Sync Service Configuration
    SYNC_INTERVAL_MINUTES=15
    ```
 
-5. **Set up MongoDB**
-   - See [database/mongo-setup.md](database/mongo-setup.md) for detailed instructions
+   **Important:** You must replace `your_openweathermap_api_key` with a valid OpenWeatherMap API key.
 
-6. **Start the server**
+6. **Set up MongoDB**
+
+   **Option A: Local MongoDB**
+   - Install [MongoDB Community Server](https://www.mongodb.com/try/download/community)
+   - Start MongoDB service:
+     - Windows: `net start MongoDB` (or use MongoDB Compass)
+     - macOS: `brew services start mongodb-community`
+     - Linux: `sudo systemctl start mongod`
+   - Default connection: `mongodb://localhost:27017/weather-platform`
+
+   **Option B: MongoDB Atlas (Cloud)**
+   - Create a free account at [MongoDB Atlas](https://www.mongodb.com/cloud/atlas)
+   - Create a cluster and database
+   - Get your connection string
+   - Replace `MONGODB_URI` in `.env` with your Atlas connection string
+
+   See [database/mongo-setup.md](database/mongo-setup.md) for detailed MongoDB setup instructions.
+
+7. **Get an OpenWeatherMap API Key**
+
+   - Sign up for free at [OpenWeatherMap](https://openweathermap.org/api)
+   - Navigate to "My API Keys"
+   - Copy your API key and paste it in the `.env` file as `WEATHER_API_KEY`
+
+8. **Start the server**
    ```bash
    npm start
    ```
+
+   The server will run on `http://localhost:3000`
 
 ## API Endpoints
 
@@ -147,7 +189,9 @@ curl "http://localhost:3000/api/locations/:locationId/weather/history?startDate=
 | `NODE_ENV` | Environment mode | development |
 | `MONGODB_URI` | MongoDB connection string | mongodb://localhost:27017/weather-platform |
 | `WEATHER_API_KEY` | OpenWeatherMap API key | - |
-| `WEATHER_API_BASE_URL` | Weather API base URL | https://api.openweathermap.org/data/2.5 |
+| `WEATHER_API_BASE_URL` | Current weather API URL | https://api.openweathermap.org/data/2.5 |
+| `WEATHER_API_FORECAST_URL` | Forecast API URL | https://api.openweathermap.org/data/2.5 |
+| `WEATHER_API_GEOCODING_URL` | Geocoding API URL | https://api.openweathermap.org/geo/1.0 |
 | `SYNC_INTERVAL_MINUTES` | Sync interval in minutes | 15 |
 
 ## Development
