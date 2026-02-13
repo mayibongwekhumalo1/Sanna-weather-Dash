@@ -13,6 +13,7 @@ app.use(cors({
     'https://sanna-weather-dash.vercel.app/',
     'https://sanna-weather-dash-1.onrender.com/',
     'https://sanna-weather-api.onrender.com',
+    'https://sanna-weather-dash.onrender.com',
     'http://localhost:5173',
     'http://localhost:3000'
   ],
