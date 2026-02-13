@@ -10,7 +10,7 @@ const app = express();
 
 app.use(cors({
   origin: [
-    'https://sanna-weather-dash-67jcmm57e.vercel.app/',
+    'https://sanna-weather-dash.vercel.app/',
     'https://sanna-weather-dash-1.onrender.com/',
     'https://sanna-weather-api.onrender.com',
     'http://localhost:5173',
