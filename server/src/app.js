@@ -8,7 +8,12 @@ import syncService from './sync/syncService.js';
 
 const app = express();
 
-app.use(cors());
+app.use(cors({
+  origin: [ 'https://sanna-weather-dash-67jcmm57e.vercel.app/',
+    'https://sanna-weather-dash-1.onrender.com/'
+  ],
+  credentials: true,
+}));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
