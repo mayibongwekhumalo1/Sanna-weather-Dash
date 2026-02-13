@@ -50,6 +50,29 @@ locationSchema.index({ name: 1, country: 1 });
 
 const Location = mongoose.model('Location', locationSchema);
 
+// Log validation errors before save
+Location.schema.pre('save', function(next) {
+  console.log('[DEBUG] Location model pre-save validation:', {
+    name: this.name,
+    country: this.country,
+    latitude: this.latitude,
+    longitude: this.longitude,
+  });
+  
+  // Check for missing required fields
+  const missing = [];
+  if (!this.name) missing.push('name');
+  if (!this.country) missing.push('country');
+  if (this.latitude === undefined) missing.push('latitude');
+  if (this.longitude === undefined) missing.push('longitude');
+  
+  if (missing.length > 0) {
+    console.error('[DEBUG] Missing required fields:', missing);
+  }
+  
+  next();
+});
+
 export default Location;
 
 

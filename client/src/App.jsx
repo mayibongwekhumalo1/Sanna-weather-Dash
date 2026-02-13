@@ -12,6 +12,7 @@ function App() {
   const [forecastData, setForecastData] = useState({})
   const [selectedLocation, setSelectedLocation] = useState(null)
   const [showForecast, setShowForecast] = useState(false)
+  const [addingLocation, setAddingLocation] = useState(false)
 
   // Fetch all loctions fom the server
   const fetchLocations = useCallback(async () => {
@@ -104,13 +105,11 @@ function App() {
   const handleAddLocation = async (e) => {
     e.preventDefault()
     if (searchQuery.trim()) {
+      setAddingLocation(true)
+      setError(null)
       try {
         const { data } = await axios.post(API_BASE, {
-          name: searchQuery,
-          country: 'Unknown',
-          latitude: Math.random() * 180 - 90,
-          longitude: Math.random() * 360 - 180,
-          timezone: 'UTC'
+          name: searchQuery.trim(),
         })
         if (data.success) {
           setLocations(prev => [...prev, data.data])
@@ -120,7 +119,11 @@ function App() {
         }
       } catch (err) {
         console.error('Error adding location:', err)
-        alert('Failed to add location: ' + (err.response?.data?.error || err.message))
+        const errorMessage = err.response?.data?.error || err.message
+        setError(errorMessage)
+        // Don't show alert, show error inline
+      } finally {
+        setAddingLocation(false)
       }
     }
   }
@@ -263,9 +266,10 @@ function App() {
                 />
                 <button
                   type="submit"
-                  className="px-8 py-3 bg-stone-800 hover:bg-stone-700 text-stone-100 font-medium tracking-wide transition-all duration-300"
+                  disabled={addingLocation || !searchQuery.trim()}
+                  className="px-8 py-3 bg-stone-800 hover:bg-stone-700 disabled:bg-stone-400 text-stone-100 font-medium tracking-wide transition-all duration-300"
                 >
-                  Add
+                  {addingLocation ? 'Validating...' : 'Add'}
                 </button>
               </div>
             </form>
@@ -400,9 +404,10 @@ function App() {
               />
               <button
                 type="submit"
-                className="px-6 py-2 bg-stone-800 hover:bg-stone-700 text-stone-100 font-medium tracking-wide transition-all duration-300"
+                disabled={addingLocation || !searchQuery.trim()}
+                className="px-6 py-2 bg-stone-800 hover:bg-stone-700 disabled:bg-stone-400 text-stone-100 font-medium tracking-wide transition-all duration-300"
               >
-                Add Location
+                {addingLocation ? 'Validating...' : 'Add Location'}
               </button>
             </div>
           </form>

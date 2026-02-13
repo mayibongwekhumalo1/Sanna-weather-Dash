@@ -7,6 +7,57 @@ class WeatherService {
     this.apiKey = process.env.WEATHER_API_KEY;
     this.baseUrl = process.env.WEATHER_API_BASE_URL || 'https://api.openweathermap.org/data/2.5';
     this.forecastUrl = process.env.WEATHER_API_FORECAST_URL || 'https://api.openweathermap.org/data/2.5';
+    this.geocodingUrl = process.env.WEATHER_API_GEOCODING_URL || 'https://api.openweathermap.org/geo/1.0';
+  }
+
+  /**
+   * Geocoding: Get coordinates for a city name
+   */
+  async geocodeCity(cityName, countryCode = '') {
+    try {
+      let query = cityName;
+      if (countryCode) {
+        query = `${cityName},${countryCode}`;
+      }
+
+      const response = await axios.get(`${this.geocodingUrl}/direct`, {
+        params: {
+          q: query,
+          limit: 1,
+          appid: this.apiKey,
+        },
+        timeout: 10000,
+      });
+
+      if (response.data.length === 0) {
+        const error = new Error(`City '${cityName}' not found`);
+        error.type = 'not_found';
+        error.statusCode = 404;
+        throw error;
+      }
+
+      const location = response.data[0];
+      console.log('[DEBUG] Geocoding raw response:', JSON.stringify(location));
+      const result = {
+        name: location.name,
+        country: location.country,
+        latitude: location.lat,
+        longitude: location.lon,
+        state: location.state || null,
+      };
+      console.log('[DEBUG] Geocoding parsed result:', JSON.stringify(result));
+      return result;
+    } catch (error) {
+      if (error.type) {
+        throw error;
+      }
+      const categorizedError = this.categorizeApiError(error, cityName);
+      console.error(`Error geocoding city (${cityName}):`, categorizedError.message);
+      const apiError = new Error(categorizedError.message);
+      apiError.type = categorizedError.type;
+      apiError.statusCode = error.response?.status || 500;
+      throw apiError;
+    }
   }
 
   /**

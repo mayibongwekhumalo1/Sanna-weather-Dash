@@ -31,7 +31,64 @@ const locationController = {
 
   async createLocation(req, res) {
     try {
-      const { name, country, latitude, longitude, timezone } = req.body;
+      let { name, country, latitude, longitude, timezone } = req.body;
+
+      console.log('[DEBUG] Raw request body:', JSON.stringify(req.body));
+      console.log('[DEBUG] Extracted fields:', { name, country, latitude, longitude });
+
+      // If name is provided but no coordinates, validate and get coordinates from API
+      if (name && (latitude === undefined || longitude === undefined)) {
+        try {
+          const geoData = await weatherService.geocodeCity(name, country || '');
+          console.log('[DEBUG] Geocoding API response:', JSON.stringify(geoData));
+          latitude = geoData.latitude;
+          longitude = geoData.longitude;
+          name = geoData.name; // Use the normalized name from API
+          country = geoData.country;
+          console.log('[DEBUG] After geocoding:', { name, country, latitude, longitude });
+        } catch (geoError) {
+          if (geoError.type === 'not_found') {
+            return res.status(404).json({
+              success: false,
+              error: `City '${name}' not found. Please check the spelling or try a different city.`,
+            });
+          }
+          throw geoError;
+        }
+      }
+
+      // Validate required fields
+      if (!name || latitude === undefined || longitude === undefined) {
+        return res.status(400).json({
+          success: false,
+          error: 'Name, latitude, and longitude are required',
+        });
+      }
+
+      // Additional validation: country must not be empty
+      if (!country || country.trim() === '') {
+        console.error('[DEBUG] Country is missing or empty:', country);
+        return res.status(400).json({
+          success: false,
+          error: 'Country is required',
+        });
+      }
+
+      console.log('[DEBUG] Final validated fields:', { name, country, latitude, longitude });
+
+      // Validate coordinate ranges
+      if (latitude < -90 || latitude > 90) {
+        return res.status(400).json({
+          success: false,
+          error: 'Latitude must be between -90 and 90',
+        });
+      }
+      if (longitude < -180 || longitude > 180) {
+        return res.status(400).json({
+          success: false,
+          error: 'Longitude must be between -180 and 180',
+        });
+      }
 
       const existingLocation = await Location.findOne({
         latitude,
