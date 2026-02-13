@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
+import axios from 'axios'
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL || '/api/locations'
+const API_BASE = import.meta.env.VITE_API_BASE_URL ||'api/locations'
 
 function App() {
   const [searchQuery, setSearchQuery] = useState('')
@@ -12,12 +13,11 @@ function App() {
   const [selectedLocation, setSelectedLocation] = useState(null)
   const [showForecast, setShowForecast] = useState(false)
 
-  // Fetch all locations fom the server
+  // Fetch all loctions fom the server
   const fetchLocations = useCallback(async () => {
     try {
       setLoading(true)
-      const response = await fetch(API_BASE)
-      const data = await response.json()
+      const { data } = await axios.get(API_BASE)
       if (data.success) {
         setLocations(data.data)
       } else {
@@ -31,11 +31,10 @@ function App() {
     }
   }, [])
 
-  // Fetch weather data for a loction
+  // Fetch wether data for a loction
   const fetchWeather = useCallback(async (location) => {
     try {
-      const response = await fetch(`${API_BASE}/${location._id}/weather`)
-      const data = await response.json()
+      const { data } = await axios.get(`${API_BASE}/${location._id}/weather`)
       if (data.success) {
         const weather = data.data.weather || {}
         setWeatherData(prev => ({
@@ -65,8 +64,7 @@ function App() {
   // Fetch 5-day forecast for a location
   const fetchForecast = useCallback(async (location) => {
     try {
-      const response = await fetch(`${API_BASE}/${location._id}/forecast`)
-      const data = await response.json()
+      const { data } = await axios.get(`${API_BASE}/${location._id}/forecast`)
       if (data.success) {
         setForecastData(prev => ({
           ...prev,
@@ -107,20 +105,13 @@ function App() {
     e.preventDefault()
     if (searchQuery.trim()) {
       try {
-        const response = await fetch(API_BASE, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            name: searchQuery,
-            country: 'Unknown',
-            latitude: Math.random() * 180 - 90,
-            longitude: Math.random() * 360 - 180,
-            timezone: 'UTC'
-          }),
+        const { data } = await axios.post(API_BASE, {
+          name: searchQuery,
+          country: 'Unknown',
+          latitude: Math.random() * 180 - 90,
+          longitude: Math.random() * 360 - 180,
+          timezone: 'UTC'
         })
-        const data = await response.json()
         if (data.success) {
           setLocations(prev => [...prev, data.data])
           setSearchQuery('')
@@ -129,17 +120,14 @@ function App() {
         }
       } catch (err) {
         console.error('Error adding location:', err)
-        alert('Failed to add location: ' + err.message)
+        alert('Failed to add location: ' + (err.response?.data?.error || err.message))
       }
     }
   }
 
   const handleRemoveLocation = async (id) => {
     try {
-      const response = await fetch(`${API_BASE}/${id}`, {
-        method: 'DELETE',
-      })
-      const data = await response.json()
+      const { data } = await axios.delete(`${API_BASE}/${id}`)
       if (data.success) {
         setLocations(prev => prev.filter(loc => loc._id !== id))
         setWeatherData(prev => {
@@ -152,16 +140,13 @@ function App() {
       }
     } catch (err) {
       console.error('Error removing location:', err)
-      alert('Failed to remove location: ' + err.message)
+      alert('Failed to remove location: ' + (err.response?.data?.error || err.message))
     }
   }
 
   const refreshWeather = async (location) => {
     try {
-      const response = await fetch(`${API_BASE}/${location._id}/weather/refresh`, {
-        method: 'POST',
-      })
-      const data = await response.json()
+      const { data } = await axios.post(`${API_BASE}/${location._id}/weather/refresh`)
       if (data.success) {
         const weather = data.data || {}
         setWeatherData(prev => ({
