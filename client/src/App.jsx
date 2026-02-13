@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 
-const API_BASE = '/locations'
+const API_BASE = import.meta.env.VITE_API_BASE_URL || '/api/locations'
 
 function App() {
   const [searchQuery, setSearchQuery] = useState('')
