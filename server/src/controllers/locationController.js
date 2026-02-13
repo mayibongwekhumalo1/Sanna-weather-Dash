@@ -31,13 +31,17 @@ const locationController = {
 
   async createLocation(req, res) {
     try {
+      console.log('[DEBUG] === CREATE LOCATION REQUEST ===');
+      console.log('[DEBUG] Content-Type:', req.headers['content-type']);
+      console.log('[DEBUG] Raw request body:', JSON.stringify(req.body));
+      
       let { name, country, latitude, longitude, timezone } = req.body;
 
-      console.log('[DEBUG] Raw request body:', JSON.stringify(req.body));
-      console.log('[DEBUG] Extracted fields:', { name, country, latitude, longitude });
+      console.log('[DEBUG] Extracted fields:', { name, country, latitude, longitude, timezone });
 
       // If name is provided but no coordinates, validate and get coordinates from API
       if (name && (latitude === undefined || longitude === undefined)) {
+        console.log('[DEBUG] Attempting geocoding for:', name, country);
         try {
           const geoData = await weatherService.geocodeCity(name, country || '');
           console.log('[DEBUG] Geocoding API response:', JSON.stringify(geoData));
@@ -111,9 +115,15 @@ const locationController = {
       });
 
       await location.save();
+      console.log('[DEBUG] Location saved successfully:', location._id);
       res.status(201).json({ success: true, data: location });
     } catch (error) {
-      console.error('Error creating location:', error.message);
+      console.error('=== CREATE LOCATION ERROR ===');
+      console.error('Error name:', error.name);
+      console.error('Error code:', error.code);
+      console.error('Error message:', error.message);
+      console.error('Error stack:', error.stack);
+      console.error('Full error:', JSON.stringify(error, Object.getOwnPropertyNames(error)));
       res.status(500).json({ success: false, error: error.message });
     }
   },
